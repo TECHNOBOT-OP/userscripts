@@ -7,7 +7,7 @@
 // @match        *://*/*
 // @grant        unsafeWindow
 // @run-at       document-start
-// updateURL     https://raw.githubusercontent.com/TECHNOBOT-OP/userscripts/master/bypass.user.js
+// updateURL     https://raw.githubusercontent.com/TECHNOBOT-OP/userscripts/main/bypass.user.js
 // ==/UserScript==
 
 (function () {
