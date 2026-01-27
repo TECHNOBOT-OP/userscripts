@@ -355,6 +355,8 @@
             this.tg = w.location.hostname === 'tipsguru.in';
             if (!existingToken && (/\.|\/.*\//i.test(pathname) || pathname.length > 20 || pathname === '/' || searchParams > 1 || search.length > 20 || unsupported.includes(w.loction.hostname)) && !this.tg) {
                 this.logger.info('Pathname indicates not a shortlink, exiting.');
+                history.replaceState(null, '', this.tokenManager.removeTokenFromHash(w.location.href));
+                this.navigation.observer?.disconnect();
                 return;
             }
             if (!existingToken) await this.waitForDOM();
