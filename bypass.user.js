@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name         Shortlinks Bypass
-// @namespace    https://github.com/user/gp-shortlink-auto
+// @namespace    https://github.com/...
 // @version      3.0.0
 // @description  Shortlinks automation — Professional, safe, production edition
 // @author       TechnoBoy
 // @match        *://*/*
 // @grant        unsafeWindow
 // @run-at       document-start
-// updateURL     https://raw.githubusercontent
+// updateURL     https://raw.githubusercontent.com/TECHNOBOT-OP/userscripts/master/bypass.user.js
 // ==/UserScript==
 
 (function () {
