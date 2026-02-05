@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Shortlinks Bypass
 // @namespace    https://github.com/...
-// @version      3.0.1-alpha
+// @version      3.0.0
 // @description  Shortlinks automation — Professional, safe, production edition
 // @author       TechnoBoy
 // @match        *://*/*
@@ -183,6 +183,7 @@
             if (!body) return false;
             const match = body.match(/(?:you\s*are\s*)?(?:currently)?\s*(?:on)?\s*step\s*(\d+)[\/\\|](\d+)/i);
             return match ? match[1] === match[2] : undefined;
+        }
     }
 
     /**
@@ -287,7 +288,7 @@
                 if (!Utils.isVisible(el)) {
                     new StyleWatcher(el, 30000, () => this.logger.warn('Timed out waiting for element to be visible/enabled:', el)).onVisibilityChange = (element, isVisible) => {
                         this.logger.info('Element became visible/enabled:', element);
-                        this.queue.push(async () => element.click());
+                        this.queue.push(async () => {element.click(); this.logger.info('Clicked element:', element);});
                         this.queue.push(async () => {
                             await Utils.sleep(50);
                             if (Utils.isVisible(element)) element.click();
@@ -311,7 +312,7 @@
                     obs.observe(el, { characterData: true, attributes: true, attributeFilter: ['innerText', 'textContent'], });
                     return;
                 }
-                this.queue.push(async () => el.click());
+                this.queue.push(async () => {el.click(); this.logger.info('Clicked element:', el);});
                 this.queue.push(async () => {
                     await Utils.sleep(100);
                     if (Utils.isVisible(el)) el.click();
