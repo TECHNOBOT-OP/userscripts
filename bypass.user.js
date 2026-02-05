@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Shortlinks Bypass
 // @namespace    https://github.com/...
-// @version      3.0.1-beta
+// @version      3.0.1-beta2
 // @description  Shortlinks automation — Professional, safe, production edition
 // @author       TechnoBoy
 // @match        *://*/*
@@ -15,7 +15,7 @@
     'use strict';
 
     const w = typeof unsafeWindow !== "undefined" ? unsafeWindow : window;
-    const unsupported = ['rarestudy.site'];
+    const unsupported = ['rarestudy.'];
 
     /**
      * Utils
@@ -372,7 +372,7 @@
         async init() {
             const existingToken = new URLSearchParams(w.location.hash.slice(1)).get('sl');
             this.tg = w.location.hostname === 'tipsguru.in';
-            if (!existingToken && (/\.|\/.*\//i.test(pathname) || pathname.length > 20 || pathname === '/' || searchParams > 1 || search.length > 20 || unsupported.includes(w.location.hostname)) && !this.tg) {
+            if (!existingToken && (/\.|\/.*\//i.test(pathname) || pathname.length > 20 || pathname === '/' || searchParams > 1 || search.length > 20 || unsupported.some(w.location.hostname)) && !this.tg) {
                 this.logger.info('Pathname indicates not a shortlink, exiting.');
                 history.replaceState(null, '', this.tokenManager.removeTokenFromHash(w.location.href));
                 this.navigation.observer?.disconnect();
@@ -419,12 +419,12 @@
                 this.logger.info('No token and not a spam blog, exiting.');
                 return;
             }
-            if (!this.tg && ((this.tokenManager.token && !this.#justCreated && JSON.parse(atob(this.tokenManager.token.split('-')[1])).hostname === w.location.hostname) || (!PageDetector.isSpamBlog() && !PageDetector.isGPPage()))) {
+            if (!this.tg && !w.location.hostname.includes('google') && ((this.tokenManager.token && !this.#justCreated && this.tokenManager.initialPath.hostname === w.location.hostname) || (!PageDetector.isSpamBlog() && !PageDetector.isGPPage()))) {
                 history.replaceState(null, '', this.tokenManager.removeTokenFromHash(w.location.href));
                 this.navigation.observer?.disconnect();
                 this.logger.info('Token belongs to this hostname, removed from URL.');
             } else {
-                if (!this.timer.active) this.timer.init();
+                if (!existingToken && !this.timer.active) this.timer.init();
                 this.navigation.interceptClicks();
                 if (w.location.hostname.includes('google')) return;
             }
