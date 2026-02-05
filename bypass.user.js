@@ -105,14 +105,14 @@
      * Token Manager
      */
     class TokenManager {
-        constructor() { this.token = null; this.initialPath = null; this.logger = new Logger(this.constructor.name); }
+        constructor() { this._token = null; this.initialPath = null; this.logger = new Logger(this.constructor.name); }
         generateToken() {
             const chars = '0123456789abcdefghijklmnopqrstuvwxyz';
             let token = 'sl';
-            for (let i = 0; i < 8; i++) token += chars.charAt(Utils.randomInt(0, 35));
-            token += "-" + btoa(JSON.stringify(this.getCurrentPathQuery()));
-            this.token = token;
             this.initialPath = this.getCurrentPathQuery();
+            for (let i = 0; i < 8; i++) token += chars.charAt(Utils.randomInt(0, 35));
+            token += "-" + btoa(JSON.stringify(this.initialPath));
+            this._token = token;
             this.logger.info('Generated token:', token);
             return token;
         }
@@ -120,7 +120,7 @@
             const { hostname, pathname, search } = w.location;
             return { hostname, pathname, search };
         }
-        appendTokenToHash(url, token = this.token) {
+        appendTokenToHash(url, token = this._token) {
             if (!token || !url) return url;
             try {
                 const u = new URL(url, w.location.href);
@@ -140,6 +140,12 @@
                 return u.toString();
             } catch { return url; }
         }
+
+        set token(value) {
+            this._token = value;
+            this.initialPath = JSON.parse(atob(value.split('-')[1]));
+        }
+        get token() { return this._token; }
     }
 
     /**
@@ -171,6 +177,12 @@
             });
             return hasButton?.length && (hasButton.length >= 2 || document.querySelector('div.site > div.site-content div.content-area > main > article[id^="post"]'));
         }
+
+        static lastStep() {
+            const body = (document.body?.innerText || '').trim();
+            if (!body) return false;
+            const match = body.match(/(?:you\s*are\s*)?(?:currently)?\s*(?:on)?\s*step\s*(\d+)[\/\\|](\d+)/i);
+            return match ? match[1] === match[2] : undefined;
     }
 
     /**
@@ -207,6 +219,7 @@
                     if (a.href.startsWith('javascript:')) return;
                     const urlObj = new URL(a.href, w.location.href);
                     if (urlObj.hostname === w.location.hostname && urlObj.pathname === w.location.pathname) a.setAttribute('href', '/readmore#sl=' + this.tokenManager.token);
+                    else if (this.tokenManager.initialPath.hostname === w.location.hostname && (urlObj.hostname === this.tokenManager.initialPath.hostname || PageDetector.lastStep())) return;
                     else a.setAttribute('href', this.tokenManager.appendTokenToHash(a.getAttribute('href')));
                 }
             });
@@ -276,7 +289,7 @@
                         this.logger.info('Element became visible/enabled:', element);
                         this.queue.push(async () => element.click());
                         this.queue.push(async () => {
-                            await Utils.sleep(100);
+                            await Utils.sleep(50);
                             if (Utils.isVisible(element)) element.click();
                         });
                     }
@@ -284,9 +297,12 @@
                 }
                 if (/\bwait\b/.test(el.textContent)) {
                     const obs = new MutationObserver(() => {
-                        this.queue.push(async () => el.click());
                         this.queue.push(async () => {
-                            await Utils.sleep(100);
+                            el.click();
+                            this.logger.info('Clicked element:', el);
+                        });
+                        this.queue.push(async () => {
+                            await Utils.sleep(50);
                             if (Utils.isVisible(el)) el.click();
                         });
                         obs.disconnect();
@@ -322,7 +338,7 @@
             this.tokenManager = new TokenManager();
             this.queue = new AsyncQueue();
             this.navigation = new NavigationInterceptor(this.tokenManager);
-            this.timer = new StealthTimer(20);
+            this.timer = new StealthTimer(10);
             this.clicker = new AutoClicker(this.queue);
             this.logger = new Logger(this.constructor.name);
         }
@@ -363,20 +379,19 @@
             if (!existingToken) await this.waitForDOM();
             let isGPPage;
             if (this.#heldScript.el) isGPPage = true;
+            this.isSpamBlog = PageDetector.isSpamBlog();
             if (!existingToken) isGPPage = isGPPage || PageDetector.isGPPage();
             this.logger.info(' IsGPPage:', isGPPage, ' ExistingToken:', existingToken);
             if (!isGPPage && !existingToken) {
-                this.logger.info('Not a GP shortlink or spam blog. Exiting.');
+                this.logger.info('Not a Shortlink redirect or redirected page.');
                 return;
             }
-            if (existingToken) this.tokenManager.token = existingToken;
-            else { this.tokenManager.generateToken(); history.replaceState(null, '', this.tokenManager.appendTokenToHash(w.location.href)); this.#justCreated = true; }
+            if (existingToken) {
+                this.tokenManager.token = existingToken;
+                history.replaceState(null, '', this.tokenManager.removeTokenFromHash(w.location.href));
+            }
+            else { this.tokenManager.generateToken(); this.#justCreated = true; }
 
-            if (w.location.hostname.includes('google')) {
-                this.navigation.init();
-                this.navigation.interceptClicks();
-                return;
-            }
             if (this.#heldScript.el) {
                 this.logger.info('Restoring held script');
                 const { el, type } = this.#heldScript;
@@ -389,20 +404,24 @@
                 });
                 el.replaceWith(clone);
             }
-            if (JSON.parse(atob(this.tokenManager.token.split('-')[1])).hostname !== w.location.hostname || this.tg) {
+
+            if (this.isSpamBlog || (existingToken && this.tokenManager.initialPath?.hostname !== w.location.hostname)) {
                 this.timer.init();
+            }
+            if (this.tokenManager.initialPath?.hostname !== w.location.hostname || this.tg) {
                 this.navigation.init();
             }
-            // await Utils.sleep(5000);
+
             this.logger.info('Initialized the xcript');
         }
 
         onDOMReady() {
-            if (!this.tokenManager.token && !PageDetector.isSpamBlog()) {
+            if (!this.tokenManager.token && !this.isSpamBlog) {
                 this.logger.info('No token and not a spam blog, exiting.');
                 return;
             }
             if (w.location.hostname.includes('google')) {
+                this.navigation.interceptClicks();
                 return;
             }
             if (!this.tg && ((this.tokenManager.token && !this.#justCreated && JSON.parse(atob(this.tokenManager.token.split('-')[1])).hostname === w.location.hostname) || (!PageDetector.isSpamBlog() && !PageDetector.isGPPage()))) {
