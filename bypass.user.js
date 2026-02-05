@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Shortlinks Bypass
 // @namespace    https://github.com/...
-// @version      3.0.1-alpha3
+// @version      3.0.1-alphac
 // @description  Shortlinks automation — Professional, safe, production edition
 // @author       TechnoBoy
 // @match        *://*/*
@@ -175,6 +175,8 @@
                 if (this.BUTTON_KEYWORDS.test(text)) { return true; }
                 return false;
             });
+            console.log(document.querySelector('div.site div.site-content div.content-area main article[id^="post"]'));
+            console.log(w.document.querySelector('div.site div.site-content div.content-area main article[id^="post"]'));
             return hasButton?.length && (hasButton.length >= 2 || document.querySelector('div.site div.site-content div.content-area main article[id^="post"]'));
         }
 
