@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Shortlinks Bypass
 // @namespace    https://github.com/...
-// @version      3.0.1-alphad
+// @version      3.0.1-beta
 // @description  Shortlinks automation — Professional, safe, production edition
 // @author       TechnoBoy
 // @match        *://*/*
@@ -175,8 +175,6 @@
                 if (this.BUTTON_KEYWORDS.test(text)) { return true; }
                 return false;
             });
-            console.log(document.querySelector('div.site div.site-content div.content-area main article[id^="post"]'));
-            console.log(w.document.querySelector('div.site div.site-content div.content-area main article[id^="post"]'));
             return hasButton?.length && (hasButton.length >= 2 || document.querySelector('div.site div.site-content div.content-area main article[id^="post"]'));
         }
 
@@ -222,7 +220,7 @@
                     if (a.href.startsWith('javascript:')) return;
                     const urlObj = new URL(a.href, w.location.href);
                     if (urlObj.hostname === w.location.hostname && urlObj.pathname === w.location.pathname) a.setAttribute('href', '/readmore#sl=' + this.tokenManager.token);
-                    else if (this.tokenManager.initialPath.hostname === w.location.hostname && (urlObj.hostname === this.tokenManager.initialPath.hostname || PageDetector.lastStep())) return;
+                    else if (this.tokenManager.initialPath.hostname === w.location.hostname && (urlObj.hostname !== this.tokenManager.initialPath.hostname || PageDetector.lastStep() || w.location.pathname === this.tokenManager.initialPath.pathname)) return;
                     else a.setAttribute('href', this.tokenManager.appendTokenToHash(a.getAttribute('href')));
                 }
             });
@@ -267,6 +265,7 @@
                 w.setTimeout = stealthSetTimeout;
                 w.setInterval = stealthSetInterval;
             }
+            this.active = true;
             new Logger(this.constructor.name).info('Activated Stealth Timer with target delay:', this.targetDelay);
         }
     }
@@ -373,7 +372,7 @@
         async init() {
             const existingToken = new URLSearchParams(w.location.hash.slice(1)).get('sl');
             this.tg = w.location.hostname === 'tipsguru.in';
-            if (!existingToken && (/\.|\/.*\//i.test(pathname) || pathname.length > 20 || pathname === '/' || searchParams > 1 || search.length > 20 || unsupported.includes(w.loction.hostname)) && !this.tg) {
+            if (!existingToken && (/\.|\/.*\//i.test(pathname) || pathname.length > 20 || pathname === '/' || searchParams > 1 || search.length > 20 || unsupported.includes(w.location.hostname)) && !this.tg) {
                 this.logger.info('Pathname indicates not a shortlink, exiting.');
                 history.replaceState(null, '', this.tokenManager.removeTokenFromHash(w.location.href));
                 this.navigation.observer?.disconnect();
@@ -382,7 +381,6 @@
             if (!existingToken) await this.waitForDOM();
             let isGPPage;
             if (this.#heldScript.el) isGPPage = true;
-            this.isSpamBlog = PageDetector.isSpamBlog();
             if (!existingToken) isGPPage = isGPPage || PageDetector.isGPPage();
             this.logger.info(' IsGPPage:', isGPPage, ' ExistingToken:', existingToken);
             if (!isGPPage && !existingToken) {
@@ -408,10 +406,8 @@
                 el.replaceWith(clone);
             }
 
-            if (this.isSpamBlog || (existingToken && this.tokenManager.initialPath?.hostname !== w.location.hostname)) {
-                this.timer.init();
-            }
             if (this.tokenManager.initialPath?.hostname !== w.location.hostname || this.tg) {
+                this.timer.init();
                 this.navigation.init();
             }
 
@@ -419,13 +415,8 @@
         }
 
         onDOMReady() {
-            console.log(this.tokenManager.token, !this.tokenManager.token, this.isSpamBlog);
-            if (!this.tokenManager.token && !this.isSpamBlog) {
+            if (!this.tokenManager.token && !PageDetector.isSpamBlog()) {
                 this.logger.info('No token and not a spam blog, exiting.');
-                return;
-            }
-            if (w.location.hostname.includes('google')) {
-                this.navigation.interceptClicks();
                 return;
             }
             if (!this.tg && ((this.tokenManager.token && !this.#justCreated && JSON.parse(atob(this.tokenManager.token.split('-')[1])).hostname === w.location.hostname) || (!PageDetector.isSpamBlog() && !PageDetector.isGPPage()))) {
@@ -433,7 +424,9 @@
                 this.navigation.observer?.disconnect();
                 this.logger.info('Token belongs to this hostname, removed from URL.');
             } else {
+                if (!this.timer.active) this.timer.init();
                 this.navigation.interceptClicks();
+                if (w.location.hostname.includes('google')) return;
             }
             const i = document.createElement('iframe');
             i.style = 'height:0;width:0;border:0;';
