@@ -419,6 +419,7 @@
         }
 
         onDOMReady() {
+            console.log(this.tokenManager.token, !this.tokenManager.token, this.isSpamBlog);
             if (!this.tokenManager.token && !this.isSpamBlog) {
                 this.logger.info('No token and not a spam blog, exiting.');
                 return;
