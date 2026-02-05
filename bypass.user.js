@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Shortlinks Bypass
 // @namespace    https://github.com/...
-// @version      3.0.1-alphac
+// @version      3.0.1-alphad
 // @description  Shortlinks automation — Professional, safe, production edition
 // @author       TechnoBoy
 // @match        *://*/*
