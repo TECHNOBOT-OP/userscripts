@@ -1,14 +1,14 @@
 // ==UserScript==
 // @name         Shortlinks Bypass
 // @namespace    https://github.com/...
-// @version      3.0.1-beta2
+// @version      3.0.1-rc1
 // @description  Shortlinks automation — Professional, safe, production edition
 // @author       TechnoBoy
 // @match        *://*/*
 // @grant        unsafeWindow
 // @run-at       document-start
 // @downloadURL  https://raw.githubusercontent.com/TECHNOBOT-OP/userscripts/refs/heads/main/bypass.user.js
-// updateURL     https://raw.githubusercontent.com/TECHNOBOT-OP/userscripts/refs/heads/main/bypass.user.js
+// @updateURL     https://raw.githubusercontent.com/TECHNOBOT-OP/userscripts/refs/heads/main/bypass.user.js
 // ==/UserScript==
 
 (function () {
@@ -362,11 +362,12 @@
             });
             observer.observe(document.documentElement, { childList: true, subtree: true });
             const timeout = setTimeout(() => observer.disconnect(), 100);
-            while (document.body.innerHTML.trim().length < 30 && document.readyState !== 'complete') {
+            while (document.body?.innerHTML?.trim()?.length < 30 && document.readyState !== 'complete') {
                 await new Promise(res => requestAnimationFrame(res));
             }
             clearTimeout(timeout);
             observer?.disconnect?.();
+            this.logger.info('DOM loaded.');
         }
 
         async init() {
@@ -388,8 +389,10 @@
                 return;
             }
             if (existingToken) {
-                this.tokenManager.token = existingToken;
+                console.log('Wooooooooooo');
                 history.replaceState(null, '', this.tokenManager.removeTokenFromHash(w.location.href));
+                this.tokenManager.token = existingToken;
+                console.log('w speed');
             }
             else { this.tokenManager.generateToken(); this.#justCreated = true; }
 
@@ -424,7 +427,7 @@
                 this.navigation.observer?.disconnect();
                 this.logger.info('Token belongs to this hostname, removed from URL.');
             } else {
-                if (!existingToken && !this.timer.active) this.timer.init();
+                if (!this.#justCreated && !this.timer.active) this.timer.init();
                 this.navigation.interceptClicks();
                 if (w.location.hostname.includes('google')) return;
             }
